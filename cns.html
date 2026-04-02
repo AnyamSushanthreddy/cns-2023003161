@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Crypto Visualizer</title>
+
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #1f4037, #99f2c8);
+    margin: 0;
+    color: #fff;
+}
+
+/* WRAPPER */
+.container {
+    max-width: 500px;
+    margin: 40px auto;
+    text-align: center;
+}
+
+/* GLASS CARD */
+.section {
+    display: none;
+    backdrop-filter: blur(15px);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+.section.active {
+    display: block;
+}
+
+/* INPUTS */
+input {
+    width: 90%;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+}
+
+/* BUTTONS */
+button {
+    padding: 10px 15px;
+    margin: 6px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ff7e5f, #feb47b);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    transform: scale(1.05);
+}
+
+/* TABS */
+.tabs button {
+    background: rgba(255,255,255,0.2);
+}
+
+.tabs button.active {
+    background: #ff7e5f;
+}
+
+/* TABLE */
+table {
+    margin: 10px auto;
+    border-collapse: collapse;
+}
+
+td {
+    background: rgba(255,255,255,0.8);
+    color: #000;
+    padding: 8px;
+    border-radius: 5px;
+}
+
+/* BOX */
+.box {
+    background: rgba(255,255,255,0.15);
+    padding: 10px;
+    border-radius: 10px;
+    margin: 10px;
+    display: inline-block;
+}
+
+/* ANIMATION */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🔐 Crypto Visualizer</h1>
+
+<div class="tabs">
+    <button onclick="showTab('caesar')" class="active">Caesar</button>
+    <button onclick="showTab('row')">Transposition</button>
+    <button onclick="showTab('dh')">Diffie-Hellman</button>
+</div>
+
+<!-- ================= CAESAR ================= -->
+<div id="caesar" class="section active">
+    <h2>Caesar Cipher</h2>
+
+    <input type="text" id="caesarMessage" placeholder="Enter message">
+
+    <p>Shift: <span id="shiftValue">3</span></p>
+    <input type="range" id="shift" min="1" max="25" value="3" oninput="updateShiftValue()">
+
+    <button onclick="encryptCaesar()">Encrypt</button>
+    <button onclick="decryptCaesar()">Decrypt</button>
+
+    <p id="caesarOutput"></p>
+</div>
+
+<!-- ================= ROW TRANSPOSITION ================= -->
+<div id="row" class="section">
+    <h2>Row Transposition Cipher</h2>
+
+    <input type="text" id="rowMessage" placeholder="Enter message">
+    <input type="text" id="rowKey" placeholder="Key (e.g. 3142)">
+
+    <button onclick="encryptRow()">Encrypt</button>
+    <button onclick="decryptRow()">Decrypt</button>
+
+    <div id="matrix"></div>
+    <p id="rowOutput"></p>
+</div>
+
+<!-- ================= DIFFIE-HELLMAN ================= -->
+<div id="dh" class="section">
+    <h2>Diffie-Hellman Key Exchange</h2>
+
+    <input type="number" id="p" placeholder="Prime (p)">
+    <input type="number" id="g" placeholder="Base (g)">
+    <input type="number" id="a" placeholder="Alice private key">
+    <input type="number" id="b" placeholder="Bob private key">
+
+    <button onclick="generateDH()">Generate</button>
+
+    <div class="box">
+        <h3>Alice</h3>
+        <p>Public Key: <span id="A"></span></p>
+        <p>Secret: <span id="S1"></span></p>
+    </div>
+
+    <div class="box">
+        <h3>Bob</h3>
+        <p>Public Key: <span id="B"></span></p>
+        <p>Secret: <span id="S2"></span></p>
+    </div>
+</div>
+
+</div>
+
+<script>
+// TAB SWITCH
+function showTab(tabId) {
+    let sections = document.querySelectorAll('.section');
+    let buttons = document.querySelectorAll('.tabs button');
+
+    sections.forEach(sec => sec.classList.remove('active'));
+    buttons.forEach(btn => btn.classList.remove('active'));
+
+    document.getElementById(tabId).classList.add('active');
+    event.target.classList.add('active');
+}
+
+// CAESAR
+function updateShiftValue() {
+    shiftValue.innerText = shift.value;
+}
+
+function caesarCipher(text, shift) {
+    let result = "";
+    for (let char of text) {
+        if (/[a-zA-Z]/.test(char)) {
+            let base = char === char.toUpperCase() ? 65 : 97;
+            result += String.fromCharCode((char.charCodeAt(0) - base + shift + 26) % 26 + base);
+        } else result += char;
+    }
+    return result;
+}
+
+function encryptCaesar() {
+    let text = caesarMessage.value;
+    let s = parseInt(shift.value);
+    caesarOutput.innerText = "Encrypted: " + caesarCipher(text, s);
+}
+
+function decryptCaesar() {
+    let text = caesarMessage.value;
+    let s = parseInt(shift.value);
+    caesarOutput.innerText = "Decrypted: " + caesarCipher(text, -s);
+}
+
+// ROW TRANSPOSITION
+function encryptRow() {
+    let message = rowMessage.value.replace(/\s/g, "");
+    let key = rowKey.value.split("").map(Number);
+
+    let col = key.length;
+    let row = Math.ceil(message.length / col);
+
+    while (message.length < row * col) message += "X";
+
+    let matrix = [];
+    let k = 0;
+
+    for (let i = 0; i < row; i++) {
+        matrix[i] = [];
+        for (let j = 0; j < col; j++) {
+            matrix[i][j] = message[k++];
+        }
+    }
+
+    displayMatrix(matrix);
+
+    let order = key.map((v,i)=>[v,i]).sort((a,b)=>a[0]-b[0]);
+
+    let cipher = "";
+    order.forEach(pair=>{
+        let colIndex = pair[1];
+        for (let i=0;i<row;i++) cipher += matrix[i][colIndex];
+    });
+
+    rowOutput.innerText = cipher;
+}
+
+function decryptRow() {
+    let cipher = rowMessage.value.replace(/\s/g, "");
+    let key = rowKey.value.split("").map(Number);
+
+    let col = key.length;
+    let row = Math.ceil(cipher.length / col);
+
+    let order = key.map((v,i)=>[v,i]).sort((a,b)=>a[0]-b[0]);
+
+    let matrix = Array.from({length: row}, ()=>Array(col).fill(""));
+
+    let k = 0;
+    order.forEach(pair=>{
+        let colIndex = pair[1];
+        for (let i=0;i<row;i++) matrix[i][colIndex] = cipher[k++];
+    });
+
+    displayMatrix(matrix);
+
+    let text = matrix.map(r=>r.join("")).join("");
+    rowOutput.innerText = text.replace(/X+$/, "");
+}
+
+function displayMatrix(matrix) {
+    let table = "<table>";
+    matrix.forEach(row=>{
+        table += "<tr>";
+        row.forEach(cell=>{
+            table += "<td>"+cell+"</td>";
+        });
+        table += "</tr>";
+    });
+    table += "</table>";
+    document.getElementById("matrix").innerHTML = table;
+}
+
+// DIFFIE-HELLMAN
+function modExp(base, exp, mod) {
+    let result = 1;
+    base %= mod;
+    while (exp > 0) {
+        if (exp % 2) result = (result * base) % mod;
+        exp = Math.floor(exp / 2);
+        base = (base * base) % mod;
+    }
+    return result;
+}
+
+function generateDH() {
+    let pVal = parseInt(p.value);
+    let gVal = parseInt(g.value);
+    let aVal = parseInt(a.value);
+    let bVal = parseInt(b.value);
+
+    let AVal = modExp(gVal, aVal, pVal);
+    let BVal = modExp(gVal, bVal, pVal);
+
+    A.innerText = AVal;
+    B.innerText = BVal;
+
+    S1.innerText = modExp(BVal, aVal, pVal);
+    S2.innerText = modExp(AVal, bVal, pVal);
+}
+</script>
+
+</body>
+</html>
